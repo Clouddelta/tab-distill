@@ -15,12 +15,11 @@ import torch
 
 # Setup spectralexplain path
 # Use environment variable or relative path for cross-platform compatibility
-import sys
-import os
-spectral_explain_path = os.environ.get('SPECTRAL_EXPLAIN_PATH', 
-                                       os.path.join(os.path.dirname(__file__), 'spectral-explain', 'src'))
-sys.path.insert(0, spectral_explain_path)
-import spectralexplain as spex
+# import sys
+# spectral_explain_path = os.environ.get('SPECTRAL_EXPLAIN_PATH', 
+                                    #    os.path.join(os.path.dirname(__file__), 'spectral-explain', 'src'))
+# sys.path.insert(0, spectral_explain_path)
+import src.spectralexplain as spex
 
 
 def process_task(

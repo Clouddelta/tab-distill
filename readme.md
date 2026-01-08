@@ -2,6 +2,7 @@
 ### Installation
 
 Setup using uv (requires [installing uv](https://docs.astral.sh/uv/getting-started/installation/) then running a script using `uv run <script>`).
+- Note: relies heavily on and makes small modifications to the [spex](https://github.com/basics-lab/spectral-explain) library
 
 ### Usage
 

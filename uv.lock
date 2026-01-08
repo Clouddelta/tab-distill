@@ -588,20 +588,6 @@ wheels = [
 ]
 
 [[package]]
-name = "galois"
-version = "0.4.10"
-source = { registry = "https://msrpypi.azurewebsites.net/stable/leloojoo" }
-dependencies = [
-    { name = "numba" },
-    { name = "numpy" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/13/54/ede3562049f1bb7f9546cbd86af8794b49733a835b0d1c40fedfbbcdbcc5/galois-0.4.10.tar.gz", hash = "sha256:94a371c995193a66798fceb079320dff154c21a0e3e0de388c06ba26f8eb574a", size = 7401288, upload-time = "2026-01-02T02:59:04.569Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d5/16/91e376aa4cad58203448510c907c267cce524d1fd2dd7f9f875f75b8584e/galois-0.4.10-py3-none-any.whl", hash = "sha256:9badf669915c92d9f298c7799cadad112baa21f53d816f427f55c4ec6ee9a2dc", size = 4196886, upload-time = "2026-01-02T02:59:02.332Z" },
-]
-
-[[package]]
 name = "gevent"
 version = "25.9.1"
 source = { registry = "https://msrpypi.azurewebsites.net/stable/leloojoo" }
@@ -2310,33 +2296,6 @@ wheels = [
 ]
 
 [[package]]
-name = "sparse-transform"
-version = "0.2.1"
-source = { registry = "https://msrpypi.azurewebsites.net/stable/leloojoo" }
-dependencies = [
-    { name = "galois" },
-    { name = "numpy" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "tqdm" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d5/da/82132137fdc207c4a14abb52fedcd8cc3dd697175f548cfb8689bd2afab8/sparse_transform-0.2.1.tar.gz", hash = "sha256:470d54c884600d97254469a3d85fac775480d18a8aa2c43574350695e1015c66", size = 24803, upload-time = "2025-04-03T08:11:39.47Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/64/ec/c85f95289e4638faf889ca02b588ad3af0f3ef8f92b99bee3ce936ef3860/sparse_transform-0.2.1-py3-none-any.whl", hash = "sha256:d01b19f8add68e2b4c98a17272830af0e03d163667f03b1dc2b0c9eb8471727b", size = 27034, upload-time = "2025-04-03T08:11:38.551Z" },
-]
-
-[[package]]
-name = "spectralexplain"
-version = "0.0.3"
-source = { git = "https://github.com/basics-lab/spectral-explain?branch=main#d3c8af7b1d6a641e5904ffc02e1c697725f8b7f6" }
-dependencies = [
-    { name = "numpy" },
-    { name = "scikit-learn" },
-    { name = "sparse-transform" },
-    { name = "tqdm" },
-]
-
-[[package]]
 name = "src"
 version = "0.1.0"
 source = { editable = "." }
@@ -2344,7 +2303,6 @@ dependencies = [
     { name = "interpret" },
     { name = "matplotlib" },
     { name = "openml" },
-    { name = "spectralexplain" },
     { name = "tabpfn-extensions" },
     { name = "torch", version = "2.9.1", source = { registry = "https://msrpypi.azurewebsites.net/stable/leloojoo" }, marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
     { name = "torch", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -2355,7 +2313,6 @@ requires-dist = [
     { name = "interpret", specifier = ">=0.7.4" },
     { name = "matplotlib", specifier = ">=3.10.8" },
     { name = "openml", specifier = ">=0.15.1" },
-    { name = "spectralexplain", git = "https://github.com/basics-lab/spectral-explain?branch=main" },
     { name = "tabpfn-extensions", specifier = ">=0.2.2" },
     { name = "torch", marker = "sys_platform != 'linux' and sys_platform != 'win32'", specifier = ">=2.7.0" },
     { name = "torch", marker = "sys_platform == 'linux' or sys_platform == 'win32'", specifier = ">=2.7.0", index = "https://download.pytorch.org/whl/cu128" },

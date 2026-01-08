@@ -7,7 +7,7 @@ import time
 from pathlib import Path
 
 # Import the process_task function
-from tabarena_single_mulindex import process_task
+from src.tabarena_single_mulindex import process_task
 
 
 def run_batch_tasks(task_ids, num_samples=0, output_dir='interaction_12_14_2025'):

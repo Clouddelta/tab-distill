@@ -1,0 +1,19 @@
+out/
+TabPFN.tar.gz
+
+# Outputs
+results
+results_azure
+**logs
+**wandb
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv

@@ -1,16 +1,13 @@
-First activate virtual environment(for **spectral-explain** package, I use a local version since one argument in the original package does not work).
 
-Then compute SPEX interaction search results, which will be saved as `interactions_summary_{task_id}_{index}.pkl` in `interaction_12_14_2025` folder:
+### Installation
 
-```bash
-python run_batch_tasks_mulindex.py
-```
+Setup using uv (requires [installing uv](https://docs.astral.sh/uv/getting-started/installation/) then running a script using `uv run <script>`).
 
-Then compare the performance of different index choices. Use `compare_index_performance.py` for all tasks in `interaction_12_14_2025` folder, e.g.:
+### Usage
 
-```bash
-python compare_index_performance.py 363698 10 --max-interaction-order 4 --output comparison.png --no-show
-```
+Compute SPEX interaction search results, which will be saved as `interactions_summary_{task_id}_{index}.pkl` in `interaction_12_14_2025` folder: `uv run run_batch_tasks_mulindex.py`
+
+Then compare the performance of different index choices. Use `compare_index_performance.py` for all tasks in `interaction_12_14_2025` folder, e.g.: `uv run compare_index_performance.py 363698 10 --max-interaction-order 4 --output comparison.png --no-show`
 
 ## Parameters
 

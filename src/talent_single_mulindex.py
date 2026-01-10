@@ -10,11 +10,11 @@ from tabpfn_extensions import TabPFNRegressor
 from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
 
 # Setup spectralexplain path
-import sys
-spectral_explain_path = os.environ.get('SPECTRAL_EXPLAIN_PATH', 
-                                       os.path.join(os.path.dirname(__file__), 'spectral-explain', 'src'))
-sys.path.insert(0, spectral_explain_path)
-import spectralexplain as spex
+# import sys
+# spectral_explain_path = os.environ.get('SPECTRAL_EXPLAIN_PATH', 
+                                    #    os.path.join(os.path.dirname(__file__), 'spectral-explain', 'src'))
+# sys.path.insert(0, spectral_explain_path)
+import src.spectralexplain as spex
 
 
 def load_talent_data(dataset_name, data_dir="Talent_data"):

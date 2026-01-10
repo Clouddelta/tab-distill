@@ -1,13 +1,16 @@
 """
 Batch script to run talent_single_mulindex.py for multiple Talent datasets
 """
+import argparse
+import os
 import sys
 import traceback
 import time
 from pathlib import Path
+from src.talent_single_mulindex import process_talent_dataset
+from os.path import join
+path_to_repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Import the process_talent_dataset function
-from talent_single_mulindex import process_talent_dataset
 
 
 def get_all_talent_datasets(data_dir="Talent_data"):
@@ -157,6 +160,14 @@ if __name__ == "__main__":
     #     "Goodreads-Computer-Books",
     #     "qsar_aquatic_toxicity",
     # ]
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--save_dir",
+        type=str,
+        default=join(path_to_repo, "results", "talent_interaction_result"),
+        help="directory for saving",
+    )
+    args = parser.parse_args()
     
     # Allow dataset names to be passed as command line arguments
     if len(sys.argv) > 1:
@@ -189,14 +200,15 @@ if __name__ == "__main__":
     # index_types = ["fbii", "fsii"]
     
     # Default output dir for Talent multi-index run
-    output_dir = 'talent_interaction_result'
+    # output_dir = 'talent_interaction_result'
+    os.makedirs(args.save_dir, exist_ok=True)
     
     # Run batch processing
     run_batch_talent_datasets(
         dataset_names=dataset_names,
         num_samples=num_samples,
         index_types=index_types,
-        output_dir=output_dir,
-        data_dir="data/Talent_data"
+        output_dir=args.save_dir,
+        data_dir=join(path_to_repo, "data", "Talent_data"),
     )
 

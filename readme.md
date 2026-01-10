@@ -35,7 +35,7 @@ Talent Datasets, N < 10000, p < 10, regression task: 10 datasets in total.
 
 Produce SPEX interaction search results for Talent Benchmark datasets, which will be saved as `interactions_summary_{task_name}_{index}.pkl` in `talent_interaction_result` folder: `uv run talent_batch_tasks_mulindex.py`
 
-[Jingyun: may need to integrate this function with the next line] Compute SPEX interaction search results for **NEW** TabArena Benchmark datasets, which will be saved as `interactions_summary_{task_id}_{index}.pkl` in `interaction_12_14_2025` folder: python run_batch_tasks_mulindex.py 363671 --num-samples 0 --output-dir my_results
+[Jingyun: may need to integrate this function with the next line] Compute SPEX interaction search results for **NEW** TabArena Benchmark datasets, which will be saved as `interactions_summary_{task_id}_{index}.pkl` in `my_results` folder: `uv run_batch_tasks_mulindex.py 363671 --num-samples 0 --output-dir my_results`
 
 Compute SPEX interaction search results, which will be saved as `interactions_summary_{task_id}_{index}.pkl` in `interaction_12_14_2025` folder: `uv run run_batch_tasks_mulindex.py`
 
@@ -54,6 +54,7 @@ Then compare the performance of different index choices. Use `compare_index_perf
 - `--interaction-dir`: Directory containing interaction pickle files (default: `./interaction_12_14_2025`)
 - `--no-show`: Do not display matplotlib windows (useful when saving plots)
 - `--indices`: Specify indices to compare (e.g., `--indices bii fbii sii`). Default: all available indices
+
 
 
 

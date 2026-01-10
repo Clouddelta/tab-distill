@@ -1,13 +1,31 @@
 """
-Batch script to run tabarena_single.py for multiple task IDs
+Batch script to run tabarena_single_mulindex.py for multiple task IDs
+
+Usage:
+    # Use default task IDs with default settings (1 sample per task)
+    python run_batch_tasks_mulindex.py
+    
+    # Process specific task IDs (positional arguments)
+    python run_batch_tasks_mulindex.py 363698 363671 363625
+    
+    # Specify number of samples to process per task
+    python run_batch_tasks_mulindex.py 363698 363671 --num-samples 2
+    
+    # Specify output directory
+    python run_batch_tasks_mulindex.py 363698 --num-samples 2 --output-dir my_results
+    
+    # Process all default tasks with custom settings
+    python run_batch_tasks_mulindex.py --num-samples 5 --output-dir my_results
 """
+import os
 import sys
 import traceback
 import time
+import argparse
 from pathlib import Path
-
-# Import the process_task function
+from os.path import join
 from src.tabarena_single_mulindex import process_task
+from src.config import path_to_repo
 
 
 def run_batch_tasks(task_ids, num_samples=0, output_dir='interaction_12_14_2025'):
@@ -84,36 +102,81 @@ def run_batch_tasks(task_ids, num_samples=0, output_dir='interaction_12_14_2025'
 
 
 if __name__ == "__main__":
-    # Define your task IDs here
-    task_ids = [
-        359950,
-        359956,
-        359959,
-        363242,
-        363615,
-        363625,
-        363675,
-        363698
+    # Define your task IDs here (default list)
+    TASK_IDS = [
+        363621,  # blood-transfusion-service-center: binary classification, blood donation return prediction
+        363629,  # diabetes: binary classification, diabetes onset prediction
+        363698,  # QSAR_fish_toxicity: regression, chemical toxicity prediction
+        363685,  # maternal_health_risk: multiclass classification, maternal health risk levels
+        363625,  # concrete_compressive_strength: regression, concrete strength prediction
+        363671,  # Fitness_Club: binary classification, customer churn / subscription behavior
+        363612,  # airfoil_self_noise: regression, airfoil noise level prediction
+        363615,  # Another-Dataset-on-used-Fiat-500: regression, used car price prediction
+        363674,  # hazelnut-spread-contaminant-detection: binary classification, food contamination detection
+        363700,  # seismic-bumps: binary classification, seismic event bump prediction
     ]
     
-    # Allow task IDs to be passed as command line arguments
-    if len(sys.argv) > 1:
-        task_ids = [int(tid) for tid in sys.argv[1:]]
+    # Parse command line arguments using argparse
+    parser = argparse.ArgumentParser(
+        description='Batch process TabArena tasks with TabPFN and spectral explain',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Use default task IDs with 1 sample per task
+  python run_batch_tasks_mulindex.py
+  
+  # Process specific task IDs (positional arguments)
+  python run_batch_tasks_mulindex.py 363698 363671 363625
+  
+  # Process with 5 samples per task (use default task IDs)
+  python run_batch_tasks_mulindex.py --num-samples 5
+  
+  # Process specific tasks with custom settings
+  python run_batch_tasks_mulindex.py 363698 363671 --num-samples 2 --output-dir my_results
+  
+  # Process all default tasks with all samples (may take very long!)
+  python run_batch_tasks_mulindex.py --num-samples 0
+        """
+    )
     
-    # Allow num_samples to be specified as second argument
-    # Default 0 means "use all samples"
-    num_samples = 0
-    if len(sys.argv) > 2:
-        try:
-            num_samples = int(sys.argv[2])
-        except ValueError:
-            print(f"Warning: Invalid num_samples '{sys.argv[2]}', using default (0=ALL): {num_samples}")
+    parser.add_argument(
+        '--task_id',
+        type=int,
+        # nargs='*',  # Zero or more positional arguments
+        default=None,
+        help='OpenML task IDs to process (positional arguments). If not provided, uses default list.'
+    )
     
-    # Run batch processing
-    # Default output dir for multi-index run
-    output_dir = 'interaction_12_14_2025'
-    if len(sys.argv) > 3:
-        output_dir = sys.argv[3]
+    parser.add_argument(
+        '--num-samples',
+        type=int,
+        default=0,
+        help='Number of training samples to process per task. Use 0 to process all samples. (default: 1)'
+    )
+    
+    parser.add_argument(
+        '--output-dir',
+        type=str,
+        default=join(path_to_repo, "results", "interaction_01_10_2025"),
+        help='Output directory for saved interaction results (default: interaction_12_14_2025)'
+    )
+    
+    args = parser.parse_args()
+    
+    # Determine which task IDs to use
+    # If positional task_ids provided, use them; otherwise use default TASK_IDS
+    task_ids = [args.task_id] if args.task_id else TASK_IDS
+    num_samples = args.num_samples
+    output_dir = args.output_dir
+    
+    # Print configuration
+    print(f"\n{'='*70}")
+    print("BATCH TASK CONFIGURATION")
+    print(f"{'='*70}")
+    print(f"Task IDs: {task_ids}")
+    print(f"Number of samples per task: {num_samples} ({'ALL samples' if num_samples == 0 else f'{num_samples} sample(s)'})")
+    print(f"Output directory: {output_dir}")
+    print(f"{'='*70}\n")
     
     # Run batch processing
     run_batch_tasks(task_ids, num_samples=num_samples, output_dir=output_dir)

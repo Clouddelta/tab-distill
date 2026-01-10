@@ -1,27 +1,22 @@
 import openml
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import OrdinalEncoder
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, accuracy_score
 import numpy as np
 import pandas as pd
 import pickle
 import os
 from pathlib import Path
 from collections import Counter
-
-# Import TabPFN and spectralexplain
-from tabpfn_extensions import TabPFNRegressor
+from tabpfn_extensions import TabPFNRegressor, TabPFNClassifier
 import torch
-
-# Setup spectralexplain path
-# Use environment variable or relative path for cross-platform compatibility
-# import sys
-# spectral_explain_path = os.environ.get('SPECTRAL_EXPLAIN_PATH', 
-                                    #    os.path.join(os.path.dirname(__file__), 'spectral-explain', 'src'))
-# sys.path.insert(0, spectral_explain_path)
+from src.config import path_to_repo
+import os
 import src.spectralexplain as spex
+import joblib
+memory = joblib.Memory(location=os.path.join(path_to_repo, "results", "joblib_cache"), verbose=0)
 
-
+@memory.cache
 def process_task(
     task_id,
     num_samples=2,
@@ -50,6 +45,29 @@ def process_task(
     print(f"Task ID: {task_id}")
     print(f"Dataset ID: {dataset.id}, Dataset Name: {dataset.name}")
 
+    # Determine task type (classification or regression)
+    # OpenML task_type_id: 1 = Supervised Classification, 2 = Supervised Regression
+    task_type_id = getattr(task, 'task_type_id', None)
+    if task_type_id == 1:
+        task_type = "classification"
+    elif task_type_id == 2:
+        task_type = "regression"
+    else:
+        # Fallback: try to infer from evaluation measure
+        eval_measure = getattr(task, 'evaluation_measure', None)
+        if eval_measure is not None:
+            eval_measure = str(eval_measure).lower()
+            if 'auc' in eval_measure or 'accuracy' in eval_measure or 'log_loss' in eval_measure:
+                task_type = "classification"
+            elif 'rmse' in eval_measure or 'mse' in eval_measure or 'r2' in eval_measure or 'mae' in eval_measure:
+                task_type = "regression"
+            else:
+                task_type = None  # Will be determined from y data
+        else:
+            task_type = None  # Will be determined from y data
+
+    print(f"Task type (from OpenML): {task_type} (task_type_id: {task_type_id})")
+
     # Get target column name
     target_name = getattr(task, 'target_name', None) or dataset.default_target_attribute
 
@@ -59,9 +77,13 @@ def process_task(
         dataset_format="dataframe"
     )
 
-    # ============================
-    # Minimal fix: encode categorical columns in X
-    # ============================
+    # Ensure X is a DataFrame
+    if not isinstance(X, pd.DataFrame):
+        X = pd.DataFrame(X)
+    if not isinstance(y, pd.Series):
+        y = pd.Series(y)
+
+    # Encode categorical columns in X (before train/test split)
     cat_cols = [
         col for col in X.columns
         if X[col].dtype == "object" or str(X[col].dtype).startswith("category")
@@ -69,23 +91,96 @@ def process_task(
     if len(cat_cols) > 0:
         encoder = OrdinalEncoder(handle_unknown="use_encoded_value", unknown_value=-1)
         X[cat_cols] = encoder.fit_transform(X[cat_cols])
+        print(f"\nEncoded {len(cat_cols)} categorical features")
+
+    # Determine final task type based on y data if not determined from OpenML
+    if task_type is None:
+        # Check if y contains strings or if unique values suggest classification
+        y_series = pd.Series(y) if not isinstance(y, pd.Series) else y
+        y_unique = y_series.nunique()
+        y_total = len(y_series)
+        # If unique values are few relative to total (e.g., < 10% of total or < 20 unique values)
+        # and y contains non-numeric data, likely classification
+        y_dtype_str = str(y_series.dtype)
+        if y_dtype_str == 'object' or 'string' in y_dtype_str.lower() or (y_unique < 20 and y_unique / y_total < 0.1):
+            task_type = "classification"
+        else:
+            task_type = "regression"
+        print(f"Task type (inferred from data): {task_type} (unique values: {y_unique}/{y_total})")
 
     # Get train/test split
     train_indices, test_indices = task.get_train_test_split_indices(fold=0, repeat=0)
 
-    # Minimal fix: convert AFTER encoding
+    # Convert X to numpy arrays AFTER encoding (always float64 for features)
     X_train = X.iloc[train_indices].to_numpy(dtype=np.float64)
-    X_test  = X.iloc[test_indices].to_numpy(dtype=np.float64)
-    y_train = y.iloc[train_indices].to_numpy(dtype=np.float64)
-    y_test  = y.iloc[test_indices].to_numpy(dtype=np.float64)
+    X_test = X.iloc[test_indices].to_numpy(dtype=np.float64)
+
+    # Convert y based on task type (don't convert to float64 yet for classification)
+    y_train_raw = y.iloc[train_indices]
+    y_test_raw = y.iloc[test_indices]
+
+    # Ensure y_train and y_test are properly formatted based on task type
+    if task_type == "classification":
+        # For classification, encode labels to integers
+        y_train_series = pd.Series(y_train_raw) if not isinstance(y_train_raw, pd.Series) else y_train_raw
+        y_test_series = pd.Series(y_test_raw) if not isinstance(y_test_raw, pd.Series) else y_test_raw
+        
+        # Check if we need to encode (if contains non-numeric values)
+        # Try to convert to numeric first to check if all values are numeric
+        try:
+            # Try numeric conversion - if successful and no NaN, use numeric labels
+            y_train_test_series = pd.to_numeric(y_train_series, errors='coerce')
+            # Check if conversion produced any NaN values (indicates non-numeric input)
+            has_nan = pd.isna(y_train_test_series).any() if isinstance(y_train_test_series, pd.Series) else False
+            
+            if has_nan:
+                # Contains non-numeric values, use LabelEncoder
+                raise ValueError("Contains non-numeric values")
+            
+            # All numeric, proceed with numeric conversion
+            y_train = np.asarray(pd.to_numeric(y_train_series, errors='coerce'), dtype=np.int64)
+            y_test = np.asarray(pd.to_numeric(y_test_series, errors='coerce'), dtype=np.int64)
+            # Ensure labels start from 0
+            unique_labels = np.unique(y_train)
+            if len(unique_labels) > 0 and unique_labels.min() != 0:
+                label_map = {old_label: new_label for new_label, old_label in enumerate(unique_labels)}
+                y_train = np.array([label_map.get(label, -1) for label in y_train], dtype=np.int64)
+                y_test = np.array([label_map.get(label, -1) for label in y_test], dtype=np.int64)
+                print(f"\nMapped labels to start from 0. Original labels: {unique_labels}")
+        except (ValueError, TypeError, AttributeError):
+            # Contains non-numeric values (strings, etc.), use LabelEncoder
+            label_encoder = LabelEncoder()
+            # Convert to string array first to handle categorical types
+            y_train_str = y_train_series.astype(str).values
+            y_test_str = y_test_series.astype(str).values
+            y_train = label_encoder.fit_transform(y_train_str)
+            y_test = label_encoder.transform(y_test_str)
+            print(f"\nEncoded labels using LabelEncoder. Classes: {label_encoder.classes_}")
+    else:
+        # For regression, ensure numeric float64
+        y_train_series = pd.Series(y_train_raw) if not isinstance(y_train_raw, pd.Series) else y_train_raw
+        y_test_series = pd.Series(y_test_raw) if not isinstance(y_test_raw, pd.Series) else y_test_raw
+        
+        y_train_dtype_str = str(y_train_series.dtype)
+        if 'object' in y_train_dtype_str or 'string' in y_train_dtype_str.lower():
+            # Try to convert to numeric
+            y_train = np.asarray(pd.to_numeric(y_train_series, errors='coerce'), dtype=np.float64)
+            y_test = np.asarray(pd.to_numeric(y_test_series, errors='coerce'), dtype=np.float64)
+            print("\nConverted labels to numeric for regression")
+        else:
+            # Already numeric, just convert to float64 and ensure 1D
+            y_train = np.asarray(y_train_series.values, dtype=np.float64).ravel()
+            y_test = np.asarray(y_test_series.values, dtype=np.float64).ravel()
 
     # Ensure y is a 1D array
     y_train = y_train.flatten() if y_train.ndim > 1 else y_train
-    y_test  = y_test.flatten() if y_test.ndim > 1 else y_test
+    y_test = y_test.flatten() if y_test.ndim > 1 else y_test
 
-    print(f"Training set shape: {X_train.shape}")
-    print(f"Test set shape: {X_test.shape}")
+    print(f"\nTraining set shape: {X_train.shape}, dtype: {X_train.dtype}")
+    print(f"Test set shape: {X_test.shape}, dtype: {X_test.dtype}")
     print(f"Number of features: {X_train.shape[1]}")
+    print(f"\ny_train dtype: {y_train.dtype}, shape: {y_train.shape}, unique values: {np.unique(y_train)[:10]}")
+    print(f"y_test dtype: {y_test.dtype}, shape: {y_test.shape}, unique values: {np.unique(y_test)[:10]}")
 
 
 
@@ -106,18 +201,46 @@ def process_task(
         # If must run on CPU, set environment variable to allow large datasets
         os.environ["TABPFN_ALLOW_CPU_LARGE_DATASET"] = "1"
 
-    # Train model using training set
-    print("\n=== Training TabPFN Model ===")
+    # Train model using training set - select appropriate model based on task type
+    print(f"\n=== Training TabPFN Model ({task_type}) ===")
     print(f"Using device: {device_to_use}")
     print(f"Training set size: {X_train.shape[0]} samples")
 
     # Create model, set device and ignore_pretraining_limits (if GPU is not available)
-    model = TabPFNRegressor(
-        device=device_to_use,
-        ignore_pretraining_limits=not torch.cuda.is_available()  # Allow CPU run if GPU is not available
-    )
+    if task_type == "classification":
+        model = TabPFNClassifier(
+            device=device_to_use,
+            ignore_pretraining_limits=not torch.cuda.is_available()  # Allow CPU run if GPU is not available
+        )
+        n_classes = len(np.unique(y_train))
+        print(f"Number of classes: {n_classes}")
+    else:
+        model = TabPFNRegressor(
+            device=device_to_use,
+            ignore_pretraining_limits=not torch.cuda.is_available()  # Allow CPU run if GPU is not available
+        )
+    
     model.fit(X_train, y_train)
-    print("TabPFN model training completed!")
+    print(f"TabPFN {task_type} model training completed!")
+
+    # Evaluate model performance
+    print(f"\n=== Model Evaluation ===")
+    if task_type == "classification":
+        y_train_pred = model.predict(X_train[:100])  # Sample for speed
+        y_test_pred = model.predict(X_test[:100])
+        train_acc = accuracy_score(y_train[:100], y_train_pred)
+        test_acc = accuracy_score(y_test[:100], y_test_pred)
+        print(f"Training Accuracy (100 samples): {train_acc:.4f}")
+        print(f"Test Accuracy (100 samples): {test_acc:.4f}")
+    else:
+        y_train_pred = model.predict(X_train[:100])  # Sample for speed
+        y_test_pred = model.predict(X_test[:100])
+        train_mse = mean_squared_error(y_train[:100], y_train_pred)
+        test_mse = mean_squared_error(y_test[:100], y_test_pred)
+        train_r2 = r2_score(y_train[:100], y_train_pred)
+        test_r2 = r2_score(y_test[:100], y_test_pred)
+        print(f"Training MSE (100 samples): {train_mse:.4f}, R²: {train_r2:.4f}")
+        print(f"Test MSE (100 samples): {test_mse:.4f}, R²: {test_r2:.4f}")
 
     ######################################################## SPEX ########################################################
 
@@ -143,6 +266,8 @@ def process_task(
 
     # Store interactions per index type
     all_interactions = {index_type: [] for index_type in index_types}
+    print(f"Task type: {task_type}")
+    
     for idx, train_point in enumerate(train_set[:num_samples_to_process]):
         print(f"\nProcessing training sample {idx + 1}/{num_samples_to_process}...")
         # if idx ==3:
@@ -166,7 +291,69 @@ def process_task(
             # Ensure float64 type
             masked_data = masked_data.astype(np.float64)
             
-            return model.predict(masked_data)
+            # For classification, use predict_proba to get continuous probability values
+            # For regression, use predict to get continuous prediction values
+            if task_type == "classification":
+                # Get probability predictions (continuous values)
+                # TabPFNClassifier should have predict_proba method (sklearn-compatible)
+                try:
+                    proba = model.predict_proba(masked_data)
+                except AttributeError:
+                    # Fallback: if predict_proba doesn't exist, try predict and convert to probability-like values
+                    # This should not happen with TabPFNClassifier, but just in case
+                    predictions = model.predict(masked_data)
+                    # Convert predictions to probabilities (this is not ideal but works as fallback)
+                    n_classes = len(np.unique(y_train))
+                    proba = np.zeros((len(predictions), n_classes))
+                    for i, pred in enumerate(predictions):
+                        proba[i, int(pred)] = 1.0
+                
+                # For binary classification, return log-odds of positive class (better for interaction analysis)
+                # For multiclass, return probability of most likely class (simpler and more stable)
+                if proba.shape[1] == 2:
+                    # Binary classification: return log-odds (logit) of positive class
+                    # log(p / (1-p)) with numerical stability
+                    p = proba[:, 1]  # probability of positive class
+                    eps = 1e-10  # small epsilon to avoid log(0) or log(1)
+                    p = np.clip(p, eps, 1 - eps)  # clip to avoid numerical issues
+                    log_odds = np.log(p / (1 - p))
+                    
+                    # Debug: check if values are too similar (causes empty Fourier transform)
+                    if len(log_odds) > 1:
+                        value_range = np.max(log_odds) - np.min(log_odds)
+                        if value_range < 1e-6:
+                            # Values are too similar, use probability directly instead
+                            if idx == 0:  # Only print warning once
+                                print(f"Warning: Log-odds values too similar (range: {value_range:.2e}), using probability directly")
+                            return p  # Return probability instead of log-odds
+                    
+                    return log_odds
+                else:
+                    # Multiclass: return probability of most confident class directly
+                    # Probability values are already continuous (0-1), which is what spectral explain needs
+                    # This avoids numerical issues with log-odds conversion for multiclass
+                    p_max = proba.max(axis=1)  # probability of most likely class
+                    # Ensure values are in valid range and return directly
+                    p_max = np.clip(p_max, 1e-10, 1.0 - 1e-10)
+                    
+                    # Debug: check if values are too similar
+                    if len(p_max) > 1:
+                        value_range = np.max(p_max) - np.min(p_max)
+                        if value_range < 1e-6 and idx == 0:
+                            print(f"Warning: Probability values too similar (range: {value_range:.2e})")
+                    
+                    return p_max
+            else:
+                # Regression: return continuous predictions
+                predictions = model.predict(masked_data)
+                
+                # Debug: check if values are too similar
+                if len(predictions) > 1:
+                    value_range = np.max(predictions) - np.min(predictions)
+                    if value_range < 1e-6 and idx == 0:
+                        print(f"Warning: Prediction values too similar (range: {value_range:.2e})")
+                
+                return predictions
         
         explainer = spex.Explainer(
             value_function=tabular_masking,
@@ -175,11 +362,17 @@ def process_task(
         )
         
         for index_type in index_types:
-            interactions = explainer.interactions(index=index_type)
-            all_interactions[index_type].append(interactions)
-            
-            print(f"Interactions for sample {idx + 1} (index={index_type}):")
-            print(interactions)
+            try:
+                interactions = explainer.interactions(index=index_type)
+                all_interactions[index_type].append(interactions)
+                
+                print(f"Interactions for sample {idx + 1} (index={index_type}):")
+                print(interactions)
+            except AssertionError as e:
+                print(f"Error processing sample {idx + 1} (index={index_type}): {e}")
+                print("This might indicate that the model predictions are not continuous enough.")
+                # Skip this sample for this index type but continue with others
+                continue
 
     print(f"\n=== Completed! Processed {num_samples_to_process} training samples ===")
     print(f"All interaction results saved in all_interactions dict keyed by index type")
@@ -216,11 +409,16 @@ def process_task(
 
     # Save results to pickle file per index type - only store top interactions information
     index_tag = "_".join(index_types)
+    # Initialize result_data and summary_data for return (will store last index_type's data)
+    result_data = None
+    summary_data = None
+    
     for index_type in index_types:
         result_data = {
             'task_id': task_id,
             'dataset_id': dataset.id,
             'dataset_name': dataset.name,
+            'task_type': task_type,  # Add task type to result
             'num_samples_processed': num_samples_to_process,
             'num_features': X_train.shape[1],
             'index_type': index_type,
@@ -235,6 +433,7 @@ def process_task(
         print(f"Saved to: {filename}")
         print(f"Task ID: {task_id}")
         print(f"Dataset: {dataset.name}")
+        print(f"Task Type: {task_type}")
         print(f"Number of samples: {num_samples_to_process}")
         print("Each sample contains top 5 interactions")
 
@@ -281,6 +480,7 @@ def process_task(
             'task_id': task_id,
             'dataset_id': dataset.id,
             'dataset_name': dataset.name,
+            'task_type': task_type,  # Add task type to summary
             'num_samples': summary['num_samples'],
             'index_type': index_type,
             'num_unique_interactions': summary['num_unique_interactions'],
@@ -294,6 +494,7 @@ def process_task(
 
         print(f"\n=== Summary Saved ({index_type}) ===")
         print(f"Saved to: {summary_filename}")
+        print(f"  Task Type: {task_type}")
         print(f"  Samples: {summary['num_samples']}")
         print(f"  Unique interactions: {summary['num_unique_interactions']}")
         print(f"  Top 10 most common interactions:")
@@ -301,6 +502,32 @@ def process_task(
         for interaction, count in sorted_interactions[:10]:
             percentage = summary['interaction_frequencies'].get(interaction, 0)
             print(f"    {interaction}: {count} occurrences ({percentage:.1f}%)")
+    
+    # Return the last processed index_type's data (for backward compatibility)
+    # If no interactions were computed, return None
+    if result_data is None or summary_data is None:
+        print("Warning: No interactions were computed successfully")
+        result_data = {
+            'task_id': task_id,
+            'dataset_id': dataset.id,
+            'dataset_name': dataset.name,
+            'task_type': task_type,
+            'num_samples_processed': 0,
+            'num_features': X_train.shape[1],
+            'index_type': 'none',
+            'interactions': []
+        }
+        summary_data = {
+            'task_id': task_id,
+            'dataset_id': dataset.id,
+            'dataset_name': dataset.name,
+            'task_type': task_type,
+            'num_samples': 0,
+            'index_type': 'none',
+            'num_unique_interactions': 0,
+            'interaction_counts': {},
+            'interaction_frequencies': {}
+        }
     
     return result_data, summary_data
 

@@ -10,6 +10,25 @@ Setup using uv (requires [installing uv](https://docs.astral.sh/uv/getting-start
 - analysis scripts are in the `notebooks` folder
 
 ### Dataset
+Source: TabArena benchmark 
+Selection Rule: N < 10000, p < 10
+Total: 10 datasets
+Task types: Regression & Classification
+
+| Task ID | Dataset Name                          | Task Type                 | Problem Description                            |
+| ------: | ------------------------------------- | ------------------------- | ---------------------------------------------- |
+|  363621 | blood-transfusion-service-center      | Binary Classification     | Predict whether a blood donor will return      |
+|  363629 | diabetes                              | Binary Classification     | Predict diabetes onset                         |
+|  363698 | QSAR_fish_toxicity                    | Regression                | Predict chemical toxicity to fish              |
+|  363685 | maternal_health_risk                  | Multiclass Classification | Predict maternal health risk level             |
+|  363625 | concrete_compressive_strength         | Regression                | Predict concrete compressive strength          |
+|  363671 | Fitness_Club                          | Binary Classification     | Predict customer churn / subscription behavior |
+|  363612 | airfoil_self_noise                    | Regression                | Predict airfoil noise level                    |
+|  363615 | Another-Dataset-on-used-Fiat-500      | Regression                | Predict used car prices                        |
+|  363674 | hazelnut-spread-contaminant-detection | Binary Classification     | Detect food contamination                      |
+|  363700 | seismic-bumps                         | Binary Classification     | Predict seismic event bumps                    |
+
+  
 Talent Datasets, N < 10000, p < 10, regression task: 10 datasets in total.
 
 ### Usage
@@ -33,4 +52,5 @@ Then compare the performance of different index choices. Use `compare_index_perf
 - `--interaction-dir`: Directory containing interaction pickle files (default: `./interaction_12_14_2025`)
 - `--no-show`: Do not display matplotlib windows (useful when saving plots)
 - `--indices`: Specify indices to compare (e.g., `--indices bii fbii sii`). Default: all available indices
+
 

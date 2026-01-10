@@ -1,0 +1,56 @@
+# amlt debug launch.yaml
+# amlt --pdb run launch.yaml
+# amlt run launch.yaml
+
+description: attention-head-reweight
+environment:
+  # image: amlt-sing/acpt-torch2.7.1-py3.10-cuda12.6-ubuntu22.04
+  image: amlt-sing/pytorch
+  # image: amlt-sing/acpt-rocm6.2_ubuntu22.04_py3.10_pytorch2.5.1
+  setup:
+    - curl -LsSf https://astral.sh/uv/install.sh | sh # install uv
+    - source /home/aiscuser/.local/bin/env # add uv to path
+    - uv sync # creates .venv with correct deps
+
+code:  
+  local_dir: $CONFIG_DIR/.. # CONFIG_DIR is the directory where this launch.yaml file is located
+
+# target:
+#   service: sing
+#   name: msrresrchvc
+#   workspace_name: chansinghws
+
+target:
+  service: sing
+  name: msroctovc
+  workspace_name: chansinghws
+
+
+storage:
+  data:
+    storage_account_name: chansingh
+    container_name: cs1
+    mount_dir: /mntv1 # dir on the local machine
+
+
+# 10C3  # 4 cores, 30 GBs mem
+# 8C7   # 8 cores, 56 GBs mem
+# 8C15  # 15 cores, 120 GBs mem
+# 8C30  # 30 cores, 240 GBs mem
+# 8C60  # 60 cores, 480 GBs mem
+
+# sku: 64G2-MI200-xGMI # options [64G16-MI200-IB-xGMI, 64G16-MI200-xGMI, 64G8-MI200-xGMI, 64G4-MI200-xGMI 64G2-MI200-xGMI]
+# jobs:
+# - name: run_fmri
+#   process_count_per_node: 1
+#   sku: 64G2-MI200-xGMI
+#   command:
+#   - echo "test"
+# - name: run_fmri2
+#   process_count_per_node: 1
+#   sku: 64G2-MI200-xGMI
+#   command:
+#   - echo "test2"
+
+# jobs gets overwritten by imodelsx.submit_utils.run_args_list
+jobs:

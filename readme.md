@@ -8,6 +8,7 @@ Setup using uv (requires [installing uv](https://docs.astral.sh/uv/getting-start
 - source code with useful importable functions is in `src` folder
 - main experiments to run are under `experiments` folder
 - analysis scripts are in the `notebooks` folder
+- hyperparameter loops are in the `scripts` folder`
 
 ### Dataset
 Source: TabArena benchmark 

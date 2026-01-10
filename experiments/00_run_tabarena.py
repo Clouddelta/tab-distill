@@ -28,12 +28,13 @@ from src.tabarena_single_mulindex import process_task
 from src.config import path_to_repo
 
 
-def run_batch_tasks(task_ids, num_samples=0, output_dir='interaction_12_14_2025'):
+def run_batch_tasks(task_ids, index_types, num_samples=0, output_dir='interaction_12_14_2025'):
     """
     Run multiple tasks in sequence
     
     Args:
         task_ids: List of OpenML task IDs to process
+        index_types: List of index types to use for TabPFN
         num_samples: Number of training samples to process per task. If 0 or None, process all.
         output_dir: Output directory for saved files
     """
@@ -55,6 +56,7 @@ def run_batch_tasks(task_ids, num_samples=0, output_dir='interaction_12_14_2025'
         try:
             result_data, summary_data = process_task(
                 task_id=task_id,
+                index_types=index_types,
                 num_samples=num_samples,
                 output_dir=output_dir
             )
@@ -140,13 +142,19 @@ Examples:
     )
     
     parser.add_argument(
-        '--task_id',
+        '--task-id',
         type=int,
         # nargs='*',  # Zero or more positional arguments
         default=None,
         help='OpenML task IDs to process (positional arguments). If not provided, uses default list.'
     )
-    
+    parser.add_argument(
+        '--index-type',
+        type=str,
+        default=None,
+        choices=["fbii", "fsii", "stii", "bii", "sii", "fourier", "mobius", None],
+        help='Index type to use for TabPFN (default: all)',
+    )
     parser.add_argument(
         '--num-samples',
         type=int,
@@ -166,6 +174,7 @@ Examples:
     # Determine which task IDs to use
     # If positional task_ids provided, use them; otherwise use default TASK_IDS
     task_ids = [args.task_id] if args.task_id else TASK_IDS
+    index_types = [args.index_type] if args.index_type else ["fbii", "fsii", "stii", "bii", "sii", "fourier", "mobius"]
     num_samples = args.num_samples
     output_dir = args.output_dir
     
@@ -179,5 +188,5 @@ Examples:
     print(f"{'='*70}\n")
     
     # Run batch processing
-    run_batch_tasks(task_ids, num_samples=num_samples, output_dir=output_dir)
+    run_batch_tasks(task_ids, index_types, num_samples=num_samples, output_dir=output_dir)
 

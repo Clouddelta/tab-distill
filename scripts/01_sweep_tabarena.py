@@ -46,7 +46,7 @@ amlt_kwargs = {
     'mnt_rename': ('/home/chansingh/mntv1', '/mntv1'),
 
     'env': {
-        'HUGGINGFACE_TOKEN': f'{open(expanduser("~/.HF_TOKEN"), "r").read().strip()}',
+        'HF_TOKEN': f'{open(expanduser("~/.HF_TOKEN"), "r").read().strip()}',
     },
 }
 submit_utils.run_args_list(

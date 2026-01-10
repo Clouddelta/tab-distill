@@ -99,6 +99,7 @@ def run_batch_tasks(task_ids, index_types, num_samples=0, output_dir='interactio
         for task_id, result in results.items():
             if not result['success']:
                 print(f"  Task {task_id}: {result.get('error', 'Unknown error')}")
+        raise ValueError(f"{failed} tasks failed during batch processing.")
     
     return results
 

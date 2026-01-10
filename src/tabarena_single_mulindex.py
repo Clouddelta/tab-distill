@@ -10,11 +10,11 @@ from pathlib import Path
 from collections import Counter
 from tabpfn_extensions import TabPFNRegressor, TabPFNClassifier
 import torch
-from src.config import path_to_repo
+from src.config import path_to_repo, cache_dir
 import os
 import src.spectralexplain as spex
 import joblib
-memory = joblib.Memory(location=os.path.join(path_to_repo, "results", "joblib_cache"), verbose=0)
+memory = joblib.Memory(location=cache_dir, verbose=0)
 
 @memory.cache
 def process_task(

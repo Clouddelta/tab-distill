@@ -34,7 +34,7 @@ args_list = submit_utils.get_args_list(
 # specify amlt resources
 amlt_kwargs = {
     'amlt_file': join(path_to_repo, 'scripts', 'launch.yaml'),
-    #'sku': '10C3', # 4 cpus
+    # 'sku': '10C3', # 4 cpus
     
     'sku': '40G1-A100',
     # 'sku': '40G2-A100',
@@ -56,7 +56,7 @@ submit_utils.run_args_list(
 
     # by default loops over jobs in serial
     # n_cpus=8,  # Uncomment to parallelize over cpus
-    # gpu_ids=[0, 1, 2, 3],  # Uncomment to run individual jobs over each gpu
+    gpu_ids=[0, 1, 2, 3],  # Uncomment to run individual jobs over each gpu
     # gpu_ids=[0],  # Uncomment to run all jobs on a single gpu
     # gpu_ids=[[0, 1], [2, 3]], # Uncomment to run jobs on [0, 1] and [2, 3] gpus respectively
     # gpu_ids=[[0, 1, 2, 3]],  # Run job on all gpus together

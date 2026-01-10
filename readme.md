@@ -4,11 +4,17 @@
 Setup using uv (requires [installing uv](https://docs.astral.sh/uv/getting-started/installation/) then running a script using `uv run <script>`).
 - Note: relies heavily on and makes small modifications to the [spex](https://github.com/basics-lab/spectral-explain) library
 
+### Dataset
+Talent Datasets, N < 10000, p < 10, regression task: 10 datasets in total.
+
 ### Usage
+
+Produce SPEX interaction search results for Talent Benchmark datasets, which will be saved as `interactions_summary_{task_name}_{index}.pkl` in `talent_interaction_result` foodler: `uv run talent_batch_tasks_mulindex.py`
 
 Compute SPEX interaction search results, which will be saved as `interactions_summary_{task_id}_{index}.pkl` in `interaction_12_14_2025` folder: `uv run run_batch_tasks_mulindex.py`
 
 Then compare the performance of different index choices. Use `compare_index_performance.py` for all tasks in `interaction_12_14_2025` folder, e.g.: `uv run compare_index_performance.py 363698 10 --max-interaction-order 4 --output comparison.png --no-show`
+
 
 ## Parameters
 
@@ -22,3 +28,4 @@ Then compare the performance of different index choices. Use `compare_index_perf
 - `--interaction-dir`: Directory containing interaction pickle files (default: `./interaction_12_14_2025`)
 - `--no-show`: Do not display matplotlib windows (useful when saving plots)
 - `--indices`: Specify indices to compare (e.g., `--indices bii fbii sii`). Default: all available indices
+

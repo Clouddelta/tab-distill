@@ -7,7 +7,7 @@ import pickle
 import os
 from pathlib import Path
 from collections import Counter
-from tabpfn_extensions import TabPFNRegressor, TabPFNClassifier
+from tabpfn import TabPFNRegressor, TabPFNClassifier
 import torch
 import src.config
 import os
@@ -226,14 +226,16 @@ def process_task(
     if task_type == "classification":
         model = TabPFNClassifier(
             device=device_to_use,
-            ignore_pretraining_limits=not torch.cuda.is_available()  # Allow CPU run if GPU is not available
+            ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+            # model_path=src.config.cache_dir_tabpfn,
         )
         n_classes = len(np.unique(y_train))
         print(f"Number of classes: {n_classes}")
     else:
         model = TabPFNRegressor(
             device=device_to_use,
-            ignore_pretraining_limits=not torch.cuda.is_available()  # Allow CPU run if GPU is not available
+            ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+            # model_path=src.config.cache_dir_tabpfn,
         )
     
     model.fit(X_train, y_train)

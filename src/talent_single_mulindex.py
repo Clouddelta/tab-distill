@@ -6,7 +6,7 @@ from pathlib import Path
 from collections import Counter
 import pickle
 
-from tabpfn_extensions import TabPFNRegressor
+from tabpfn import TabPFNRegressor
 from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
 
 # Setup spectralexplain path

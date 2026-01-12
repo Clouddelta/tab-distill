@@ -10,9 +10,9 @@ dependencies = [
 	"matplotlib>=3.10.8",
 	"openml>=0.15.1",
 	"sparse-transform>=0.2.1",
-	"tabpfn-extensions>=0.2.2",
 	"torch>=2.7.0",
 	"amlt>=10.16.5",
+	"tabpfn>=6.3.0",
 ]
 
 [tool.uv.sources]

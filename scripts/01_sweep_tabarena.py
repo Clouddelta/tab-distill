@@ -67,7 +67,7 @@ submit_utils.run_args_list(
     # gpu_ids=[[0, 1, 2, 3]],  # Run job on all gpus together
 
     # uncomment this to run jobs on cluster (need to run this script from the scripts directory)
-    # amlt_kwargs=amlt_kwargs,
+    amlt_kwargs=amlt_kwargs,
     cmd_python='pwd; .venv/bin/python',
 )
     

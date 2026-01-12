@@ -5,8 +5,6 @@ import os
 from pathlib import Path
 from collections import Counter
 import pickle
-
-from tabpfn import TabPFNRegressor
 from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
 
 # Setup spectralexplain path
@@ -154,7 +152,9 @@ def process_talent_dataset(
     print(f"Using device: {device_to_use}")
     print(f"Training set size: {X_train.shape[0]} samples")
     
+    
     # Create model, set device and ignore_pretraining_limits (if GPU is not available)
+    from tabpfn import TabPFNRegressor
     model = TabPFNRegressor(
         device=device_to_use,
         ignore_pretraining_limits=not torch.cuda.is_available()

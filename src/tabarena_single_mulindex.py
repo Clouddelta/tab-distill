@@ -7,7 +7,6 @@ import pickle
 import os
 from pathlib import Path
 from collections import Counter
-from tabpfn import TabPFNRegressor, TabPFNClassifier
 import torch
 import src.config
 import os
@@ -223,6 +222,8 @@ def process_task(
     print(f"Training set size: {X_train.shape[0]} samples")
 
     # Create model, set device and ignore_pretraining_limits (if GPU is not available)
+    os.environ['TABPFN_MODEL_CACHE_DIR'] = src.config.cache_dir_tabpfn
+    from tabpfn import TabPFNRegressor, TabPFNClassifier
     if task_type == "classification":
         model = TabPFNClassifier(
             device=device_to_use,

@@ -34,15 +34,19 @@ args_list = submit_utils.get_args_list(
 # specify amlt resources
 amlt_kwargs = {
     'amlt_file': join(path_to_repo, 'scripts', 'launch.yaml'),
-    # 'sku': '10C3', # 4 cpus
     
-    'sku': '40G1-A100',
+    
     # 'sku': '40G2-A100',
     # 'sku': '40G1-A100',
     # 'sku': 'G2-A100',
-    'target___name': 'palisades26',
-    # 'target___name': 'msrresrchvc',
     # 'target___name': 'msroctovc',
+
+    'sku': '40G1-A100',
+    'target___name': 'palisades26',
+
+    # 'sku': '10C3', # 4 cpus
+    # 'target___name': 'msrresrchvc',
+    
     'mnt_rename': ('/home/chansingh/mntv1', '/mntv1'),
 
     'env': {
@@ -50,19 +54,19 @@ amlt_kwargs = {
     },
 }
 submit_utils.run_args_list(
-    args_list,
+    args_list[:1],
     script_name=join(path_to_repo, 'experiments', '00_run_tabarena.py'),
     # actually_run=False,
 
     # by default loops over jobs in serial
-    # n_cpus=8,  # Uncomment to parallelize over cpus
-    gpu_ids=[0, 1, 2, 3],  # Uncomment to run individual jobs over each gpu
+    # n_cpus=64,  # Uncomment to parallelize over cpus
+    # gpu_ids=[0, 1, 2, 3],  # Uncomment to run individual jobs over each gpu
     # gpu_ids=[0],  # Uncomment to run all jobs on a single gpu
     # gpu_ids=[[0, 1], [2, 3]], # Uncomment to run jobs on [0, 1] and [2, 3] gpus respectively
     # gpu_ids=[[0, 1, 2, 3]],  # Run job on all gpus together
 
     # uncomment this to run jobs on cluster (need to run this script from the scripts directory)
     amlt_kwargs=amlt_kwargs,
-    cmd_python='.venv/bin/python',
+    cmd_python='pwd; .venv/bin/python',
 )
     

@@ -105,7 +105,7 @@ def run_batch_tasks(task_ids, index_types, num_samples=0, output_dir='interactio
 
 
 if __name__ == "__main__":
-    print('Starting!')
+    print('Starting...!')
     # Define your task IDs here (default list)
     TASK_IDS = [
         363621,  # blood-transfusion-service-center: binary classification, blood donation return prediction
@@ -172,7 +172,7 @@ Examples:
     )
     
     args = parser.parse_args()
-    
+
     # Determine which task IDs to use
     # If positional task_ids provided, use them; otherwise use default TASK_IDS
     task_ids = [args.task_id] if args.task_id else TASK_IDS

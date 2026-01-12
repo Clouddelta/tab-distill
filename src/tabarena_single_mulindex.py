@@ -1,4 +1,3 @@
-import openml
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import OrdinalEncoder, LabelEncoder
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, accuracy_score
@@ -10,11 +9,24 @@ from pathlib import Path
 from collections import Counter
 from tabpfn_extensions import TabPFNRegressor, TabPFNClassifier
 import torch
-from src.config import path_to_repo, cache_dir
+import src.config
 import os
 import src.spectralexplain as spex
 import joblib
-memory = joblib.Memory(location=cache_dir, verbose=0)
+memory = joblib.Memory(location=src.config.cache_dir, verbose=0)
+
+def openml_get_task(task_id):
+    fname = os.path.join(src.config.cache_dir_openml, str(task_id) + '.pkl')
+    if os.path.exists(fname):
+        print(f'found cached task {task_id}')
+        return joblib.load(fname)
+    import openml
+    print('caching...')
+    task = openml.tasks.get_task(task_id)
+    dataset = task.get_dataset()
+    joblib.dump((task, dataset), fname)
+    return task, dataset
+
 
 @memory.cache
 def process_task(
@@ -35,13 +47,17 @@ def process_task(
     Returns:
         tuple: (result_data, summary_data) dictionaries
     """
+    # import openml
     # Create output directory if it doesn't exist
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
     # Load task and data
-    task = openml.tasks.get_task(task_id)
-    dataset = task.get_dataset()
+    # task = openml.tasks.get_task(task_id)
+    # dataset = task.get_dataset()
+    # openml.config.cache_directory = src.config.cache_dir_openml
+    # print(f"CACHE_DIR: {openml.config.get_cache_directory()}")
+    task, dataset = openml_get_task(task_id)
     print(f"Task ID: {task_id}")
     print(f"Dataset ID: {dataset.id}, Dataset Name: {dataset.name}")
 
@@ -535,5 +551,21 @@ def process_task(
 # Main execution
 if __name__ == "__main__":
     # Directly specify task ID
-    task_id = 363698  # QSAR_fish_toxicity
-    process_task(task_id, num_samples=2)
+    # task_id = 363698  # QSAR_fish_toxicity
+    # process_task(task_id, num_samples=2)
+
+    # cache a bunch of task datasets
+    for task_id in [
+        363621,  # blood-transfusion-service-center: binary classification, blood donation return prediction
+        363629,  # diabetes: binary classification, diabetes onset prediction
+        363698,  # QSAR_fish_toxicity: regression, chemical toxicity prediction
+        363685,  # maternal_health_risk: multiclass classification, maternal health risk levels
+        363625,  # concrete_compressive_strength: regression, concrete strength prediction
+        363671,  # Fitness_Club: binary classification, customer churn / subscription behavior
+        363612,  # airfoil_self_noise: regression, airfoil noise level prediction
+        363615,  # Another-Dataset-on-used-Fiat-500: regression, used car price prediction
+        363674,  # hazelnut-spread-contaminant-detection: binary classification, food contamination detection
+        363700,  # seismic-bumps: binary classification, seismic event bump prediction
+    ]:
+        print(task_id)
+        openml_get_task(task_id)

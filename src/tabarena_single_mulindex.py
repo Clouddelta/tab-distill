@@ -173,7 +173,7 @@ def get_data(task_id):
     print(f"y_test dtype: {y_test.dtype}, shape: {y_test.shape}, unique values: {np.unique(y_test)[:10]}")
     return dataset, task_type, X_train, X_test, y_train, y_test
 
-def get_fitted_model(task_type, X_train, y_train, model_type='rulefit'):
+def get_fitted_model(task_type, X_train, y_train, model_type='tabpfn'):
     ######################################################## TABPFN ########################################################
     # import torch
     # Check if GPU is available

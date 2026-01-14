@@ -6,7 +6,7 @@ from src.config import path_to_repo
 # List of values to sweep over (sweeps over all combinations of these)
 params_shared_dict = {
     'output-dir': ['/home/chansingh/mntv1/jingyun/results/interaction_01_10_2025'],
-    'index-type': ["fbii", "fsii", "stii", "bii", "sii", "fourier", "mobius"],
+    # 'index-type': ["fbii", "fsii", "stii", "bii", "sii", "fourier", "mobius"],
     'task-id': [
         363621,  # blood-transfusion-service-center: binary classification, blood donation return prediction
         363629,  # diabetes: binary classification, diabetes onset prediction
@@ -64,7 +64,7 @@ submit_utils.run_args_list(
     # actually_run=False,
 
     # by default loops over jobs in serial
-    # n_cpus=64,  # Uncomment to parallelize over cpus
+    n_cpus=10,  # Uncomment to parallelize over cpus
     # gpu_ids=[0, 1, 2, 3],  # Uncomment to run individual jobs over each gpu
     # gpu_ids=[0],  # Uncomment to run all jobs on a single gpu
     # gpu_ids=[[0, 1], [2, 3]], # Uncomment to run jobs on [0, 1] and [2, 3] gpus respectively

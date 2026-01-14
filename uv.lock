@@ -5036,6 +5036,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "amlt" },
+    { name = "imodels" },
     { name = "imodelsx" },
     { name = "interpret" },
     { name = "matplotlib" },
@@ -5048,6 +5049,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "amlt", specifier = ">=10.16.5", index = "https://msrpypi.azurewebsites.net/stable/leloojoo" },
+    { name = "imodels", specifier = ">=2.0.4" },
     { name = "imodelsx", specifier = ">=1.0.11" },
     { name = "interpret", specifier = ">=0.7.4" },
     { name = "matplotlib", specifier = ">=3.10.8" },

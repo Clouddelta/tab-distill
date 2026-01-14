@@ -173,7 +173,7 @@ def get_data(task_id):
     print(f"y_test dtype: {y_test.dtype}, shape: {y_test.shape}, unique values: {np.unique(y_test)[:10]}")
     return dataset, task_type, X_train, X_test, y_train, y_test
 
-def get_fitted_model(task_type, X_train, y_train, model_type='tabpfn'):
+def get_fitted_model(task_type, X_train, y_train, model_type='rulefit'):
     ######################################################## TABPFN ########################################################
     # import torch
     # Check if GPU is available
@@ -219,6 +219,15 @@ def get_fitted_model(task_type, X_train, y_train, model_type='tabpfn'):
                 # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
                 # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-regressor-v2.5_default.ckpt'),
             )
+    
+    elif model_type == 'rulefit':
+        from imodels import RuleFitClassifier, RuleFitRegressor
+        if task_type == "classification":
+            model = RuleFitClassifier()
+            n_classes = len(np.unique(y_train))
+            print(f"Number of classes: {n_classes}")
+        else:
+            model = RuleFitRegressor()
 
     # fit ridge model instead
     elif model_type == 'ridge':

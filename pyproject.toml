@@ -13,6 +13,7 @@ dependencies = [
 	"amlt>=10.16.5",
 	"tabicl>=0.1.4",
 	"tabpfn>=6.3.1",
+	"imodels>=2.0.4",
 ]
 
 [tool.uv.sources]

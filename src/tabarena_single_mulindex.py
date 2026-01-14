@@ -173,7 +173,7 @@ def get_data(task_id):
     print(f"y_test dtype: {y_test.dtype}, shape: {y_test.shape}, unique values: {np.unique(y_test)[:10]}")
     return dataset, task_type, X_train, X_test, y_train, y_test
 
-def get_fitted_model(task_type, X_train, y_train):
+def get_fitted_model(task_type, X_train, y_train, model_type='tabpfn'):
     ######################################################## TABPFN ########################################################
     # import torch
     # Check if GPU is available
@@ -200,56 +200,57 @@ def get_fitted_model(task_type, X_train, y_train):
 
     # Create model, set device and ignore_pretraining_limits (if GPU is not available)
     # os.environ['TABPFN_MODEL_CACHE_DIR'] = src.config.cache_dir_tabpfn
-    
-    if task_type == "classification":
-        from tabpfn.classifier import TabPFNClassifier
-        model = TabPFNClassifier(
-            device=device_to_use,
-            ignore_pretraining_limits=True,
-            # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
-            # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-classifier-v2.5_default.ckpt'),
-        )
-        n_classes = len(np.unique(y_train))
-        print(f"Number of classes: {n_classes}")
-    else:
-        from tabpfn.regressor import TabPFNRegressor
-        model = TabPFNRegressor(
-            device=device_to_use,
-            ignore_pretraining_limits=True,
-            # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
-            # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-regressor-v2.5_default.ckpt'),
-        )
+    if model_type == 'tabpfn':
+        if task_type == "classification":
+            from tabpfn.classifier import TabPFNClassifier
+            model = TabPFNClassifier(
+                device=device_to_use,
+                ignore_pretraining_limits=True,
+                # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+                # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-classifier-v2.5_default.ckpt'),
+            )
+            n_classes = len(np.unique(y_train))
+            print(f"Number of classes: {n_classes}")
+        else:
+            from tabpfn.regressor import TabPFNRegressor
+            model = TabPFNRegressor(
+                device=device_to_use,
+                ignore_pretraining_limits=True,
+                # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+                # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-regressor-v2.5_default.ckpt'),
+            )
 
     # fit ridge model instead
-    # if task_type == "classification":
-    #     from sklearn.linear_model import RidgeClassifier
-    #     model = RidgeClassifier()
-    #     n_classes = len(np.unique(y_train))
-    #     print(f"Number of classes: {n_classes}")
-    # else:
-    #     from sklearn.linear_model import Ridge
-    #     model = Ridge()
-
-    # if task_type == "classification":
-    #     from tabicl import TabICLClassifier
-    #     # from tabpfn.classifier import TabPFNClassifier
-    #     model = TabICLClassifier(
-    #         device=device_to_use,
-    #         # ignore_pretraining_limits=True,
-    #         # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
-    #         # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-classifier-v2.5_default.ckpt'),
-    #     )
-    #     n_classes = len(np.unique(y_train))
-    #     print(f"Number of classes: {n_classes}")
-    # else:
-    #     raise NotImplementedError("Regression task not implemented with TabICL yet")
-    #     # from tabpfn.regressor import TabPFNRegressor
-    #     # model = TabPFNRegressor(
-    #     #     device=device_to_use,
-    #     #     ignore_pretraining_limits=True,
-    #     #     # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
-    #     #     # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-regressor-v2.5_default.ckpt'),
-    #     # )
+    elif model_type == 'ridge':
+        if task_type == "classification":
+            from sklearn.linear_model import LogisticRegression
+            model = LogisticRegression()
+            n_classes = len(np.unique(y_train))
+            print(f"Number of classes: {n_classes}")
+        else:
+            from sklearn.linear_model import Ridge
+            model = Ridge()
+    elif model_type == 'tabicl':
+        if task_type == "classification":
+            from tabicl import TabICLClassifier
+            # from tabpfn.classifier import TabPFNClassifier
+            model = TabICLClassifier(
+                device=device_to_use,
+                # ignore_pretraining_limits=True,
+                # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+                # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-classifier-v2.5_default.ckpt'),
+            )
+            n_classes = len(np.unique(y_train))
+            print(f"Number of classes: {n_classes}")
+        else:
+            raise NotImplementedError("Regression task not implemented with TabICL yet")
+            # from tabpfn.regressor import TabPFNRegressor
+            # model = TabPFNRegressor(
+            #     device=device_to_use,
+            #     ignore_pretraining_limits=True,
+            #     # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+            #     # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-regressor-v2.5_default.ckpt'),
+            # )
     
     model.fit(X_train, y_train)
     print(f"{task_type} model training completed!")

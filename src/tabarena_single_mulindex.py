@@ -12,7 +12,8 @@ import os
 import src.spectralexplain as spex
 import joblib
 
-def openml_get_task(task_id):
+
+def _openml_get_task(task_id):
     fname = os.path.join(src.config.cache_dir_openml, str(task_id) + '.pkl')
     if os.path.exists(fname):
         print(f'found cached task {task_id}')
@@ -24,47 +25,13 @@ def openml_get_task(task_id):
     joblib.dump((task, dataset), fname)
     return task, dataset
 
-
-def process_task(
-    task_id,
-    num_samples=2,
-    index_types=None,
-    output_dir='interaction_result'
-):
-    """
-    Process a single task and save interaction results
-    
-    Args:
-        task_id: OpenML task ID
-        num_samples: Number of training samples to process (default: 2)
-        index_types: List of interaction index types to compute
-        output_dir: Output directory for saved files (default: 'interaction_result')
-    
-    Returns:
-        tuple: (result_data, summary_data) dictionaries
-    """
-    # import openml
-    # Create output directory if it doesn't exist
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-
-    # Check if already done
-    all_completed = True
-    for index_type in index_types:
-        summary_filename = output_path / f'interactions_summary_{task_id}_{index_type}.pkl'
-        if not summary_filename.exists():
-            all_completed = False
-    if all_completed:
-        print('Already done!')
-        return None, None
-            
-    
+def get_data(task_id):
     # Load task and data
     # task = openml.tasks.get_task(task_id)
     # dataset = task.get_dataset()
     # openml.config.cache_directory = src.config.cache_dir_openml
     # print(f"CACHE_DIR: {openml.config.get_cache_directory()}")
-    task, dataset = openml_get_task(task_id)
+    task, dataset = _openml_get_task(task_id)
     print(f"Task ID: {task_id}")
     print(f"Dataset ID: {dataset.id}, Dataset Name: {dataset.name}")
 
@@ -204,9 +171,9 @@ def process_task(
     print(f"Number of features: {X_train.shape[1]}")
     print(f"\ny_train dtype: {y_train.dtype}, shape: {y_train.shape}, unique values: {np.unique(y_train)[:10]}")
     print(f"y_test dtype: {y_test.dtype}, shape: {y_test.shape}, unique values: {np.unique(y_test)[:10]}")
+    return dataset, task_type, X_train, X_test, y_train, y_test
 
-
-
+def get_fitted_model(task_type, X_train, y_train):
     ######################################################## TABPFN ########################################################
     # import torch
     # Check if GPU is available
@@ -253,6 +220,16 @@ def process_task(
             # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-regressor-v2.5_default.ckpt'),
         )
 
+    # fit ridge model instead
+    # if task_type == "classification":
+    #     from sklearn.linear_model import RidgeClassifier
+    #     model = RidgeClassifier()
+    #     n_classes = len(np.unique(y_train))
+    #     print(f"Number of classes: {n_classes}")
+    # else:
+    #     from sklearn.linear_model import Ridge
+    #     model = Ridge()
+
     # if task_type == "classification":
     #     from tabicl import TabICLClassifier
     #     # from tabpfn.classifier import TabPFNClassifier
@@ -276,7 +253,9 @@ def process_task(
     
     model.fit(X_train, y_train)
     print(f"{task_type} model training completed!")
+    return model
 
+def eval_fitted_model(model, task_type, X_train, y_train, X_test, y_test):
     # Evaluate model performance
     print(f"\n=== Model Evaluation ===")
     if task_type == "classification":
@@ -296,8 +275,7 @@ def process_task(
         print(f"Training MSE (100 samples): {train_mse:.4f}, R²: {train_r2:.4f}")
         print(f"Test MSE (100 samples): {test_mse:.4f}, R²: {test_r2:.4f}")
 
-    ######################################################## SPEX ########################################################
-
+def run_spex(model, X_train, num_samples, task_type, index_types):
     print("\nLoaded:", spex.__file__)
 
     if index_types is None:
@@ -305,7 +283,7 @@ def process_task(
 
     # Use all samples from training set
     train_set = X_train.copy().astype(np.float64)
-    train_labels = y_train.copy().astype(np.float64)
+    # train_labels = y_train.copy().astype(np.float64)
     print(f"\nTotal training set size: {X_train.shape}")
     num_samples_to_use = len(train_set) if (num_samples is None or num_samples <= 0) else min(num_samples, len(train_set))
     num_samples_to_process = min(num_samples_to_use, 1000)  # cap to first 1000 samples
@@ -326,7 +304,8 @@ def process_task(
         print(f"\nProcessing training sample {idx + 1}/{num_samples_to_process}...")
         # if idx ==3:
         #     break
-        def tabular_masking(X):
+        # set up masking function which gets called in explainer
+        def _tabular_masking(X):
             # X is a boolean mask array (batch_size x num_features), indicating which features are kept
             # For each sample, if X[i, j] == True, use train_point[j], otherwise use train_mean[j]
             # Need to handle batch input
@@ -410,7 +389,7 @@ def process_task(
                 return predictions
         
         explainer = spex.Explainer(
-            value_function=tabular_masking,
+            value_function=_tabular_masking,
             features=range(len(train_point)),
             sample_budget=1000
         )
@@ -430,27 +409,26 @@ def process_task(
 
     print(f"\n=== Completed! Processed {num_samples_to_process} training samples ===")
     print(f"All interaction results saved in all_interactions dict keyed by index type")
+    return all_interactions, num_samples_to_process
 
+def extract_interaction_info(interaction_obj, top_k=5):
+    """Extract key information from interaction object, only keeping top K interactions"""
+    # Get top k interactions (excluding baseline value, i.e., empty tuple)
+    interactions_dict = interaction_obj.interactions
+    # Filter out empty tuple (baseline), sort by absolute value and take top k
+    filtered_interactions = {k: float(v) for k, v in interactions_dict.items() if len(k) > 0}
+    sorted_interactions = dict(sorted(filtered_interactions.items(), key=lambda x: abs(x[1]), reverse=True)[:top_k])
+    
+    return {
+        'index': interaction_obj.index,
+        'max_order': int(interaction_obj.max_order),
+        'baseline_value': float(interaction_obj.baseline_value),
+        'num_features': int(interaction_obj.num_features),
+        'sample_budget': int(interaction_obj.sample_budget),
+        'top_interactions': sorted_interactions  # Only save top k interactions
+    }
 
-
-    ######################################################## SAVE RESULTS ########################################################
-    # Extract top interactions information from interaction objects
-    def extract_interaction_info(interaction_obj, top_k=5):
-        """Extract key information from interaction object, only keeping top K interactions"""
-        # Get top k interactions (excluding baseline value, i.e., empty tuple)
-        interactions_dict = interaction_obj.interactions
-        # Filter out empty tuple (baseline), sort by absolute value and take top k
-        filtered_interactions = {k: float(v) for k, v in interactions_dict.items() if len(k) > 0}
-        sorted_interactions = dict(sorted(filtered_interactions.items(), key=lambda x: abs(x[1]), reverse=True)[:top_k])
-        
-        return {
-            'index': interaction_obj.index,
-            'max_order': int(interaction_obj.max_order),
-            'baseline_value': float(interaction_obj.baseline_value),
-            'num_features': int(interaction_obj.num_features),
-            'sample_budget': int(interaction_obj.sample_budget),
-            'top_interactions': sorted_interactions  # Only save top k interactions
-        }
+def save_results(task_id, dataset, task_type, X_train, all_interactions, num_samples_to_process, output_path, index_types):
 
     # Extract top interactions information for all samples per index type
     interactions_data = {
@@ -462,7 +440,7 @@ def process_task(
     }
 
     # Save results to pickle file per index type - only store top interactions information
-    index_tag = "_".join(index_types)
+    # index_tag = "_".join(index_types)
     # Initialize result_data and summary_data for return (will store last index_type's data)
     result_data = None
     summary_data = None
@@ -582,8 +560,55 @@ def process_task(
             'interaction_counts': {},
             'interaction_frequencies': {}
         }
-    
     return result_data, summary_data
+
+def process_task(
+    task_id,
+    num_samples=2,
+    index_types=None,
+    output_dir='interaction_result'
+):
+    """
+    Process a single task and save interaction results
+    
+    Args:
+        task_id: OpenML task ID
+        num_samples: Number of training samples to process (default: 2)
+        index_types: List of interaction index types to compute
+        output_dir: Output directory for saved files (default: 'interaction_result')
+    
+    Returns:
+        tuple: (result_data, summary_data) dictionaries
+    """
+    # import openml
+    # Create output directory if it doesn't exist
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Check if already done
+    all_completed = True
+    for index_type in index_types:
+        summary_filename = output_path / f'interactions_summary_{task_id}_{index_type}.pkl'
+        if not summary_filename.exists():
+            all_completed = False
+    if all_completed:
+        print('Already done!')
+        return None, None
+
+            
+    dataset, task_type, X_train, X_test, y_train, y_test = get_data(task_id)
+    model = get_fitted_model(task_type, X_train, y_train)
+    eval_fitted_model(model, task_type, X_train, y_train, X_test, y_test)
+    all_interactions, num_samples_to_process = run_spex(
+        model=model,
+        X_train=X_train,
+        num_samples=num_samples,
+        task_type=task_type,
+        index_types=index_types
+    )
+    result_data, summary_data = save_results(task_id, dataset, task_type, X_train, all_interactions, num_samples_to_process, output_path, index_types)
+    return result_data, summary_data
+
 
 
 # Main execution
@@ -606,4 +631,4 @@ if __name__ == "__main__":
         363700,  # seismic-bumps: binary classification, seismic event bump prediction
     ]:
         print(task_id)
-        openml_get_task(task_id)
+        _openml_get_task(task_id)

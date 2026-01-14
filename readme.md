@@ -2,6 +2,7 @@
 ### Installation
 
 Setup using uv (requires [installing uv](https://docs.astral.sh/uv/getting-started/installation/) then run a script using `uv run <script>`).
+- Set appropriate paths in `src/config.py` for caching OpenML datasets and TabPFN models.
 - Note: relies heavily on and makes small modifications to the [spex](https://github.com/basics-lab/spectral-explain) library
 
 ### Organization

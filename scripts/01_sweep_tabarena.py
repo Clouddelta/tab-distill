@@ -52,22 +52,25 @@ amlt_kwargs = {
     'env': {
         'HF_TOKEN': f'{open(expanduser("~/.HF_TOKEN"), "r").read().strip()}',
         'TABPFN_DISABLE_TELEMETRY': '1',
+        # 'PYTHONDONTWRITEBYTECODE': '1',
+        # 'PYTHONPYCACHEPREFIX': '/tmp/aiscuser/pycache',
+        # 'XDG_CACHE_HOME': '/tmp/aiscuser/xdg-cache',
     },
 }
 submit_utils.run_args_list(
+    # args_list[1:4],
     args_list,
     script_name=join(path_to_repo, 'experiments', '00_run_tabarena.py'),
     # actually_run=False,
 
     # by default loops over jobs in serial
-    # n_cpus=64,  # Uncomment to parallelize over cpus
+    n_cpus=64,  # Uncomment to parallelize over cpus
     # gpu_ids=[0, 1, 2, 3],  # Uncomment to run individual jobs over each gpu
     # gpu_ids=[0],  # Uncomment to run all jobs on a single gpu
     # gpu_ids=[[0, 1], [2, 3]], # Uncomment to run jobs on [0, 1] and [2, 3] gpus respectively
     # gpu_ids=[[0, 1, 2, 3]],  # Run job on all gpus together
 
     # uncomment this to run jobs on cluster (need to run this script from the scripts directory)
-    amlt_kwargs=amlt_kwargs,
+    # amlt_kwargs=amlt_kwargs,
     cmd_python='pwd; .venv/bin/python',
 )
-    

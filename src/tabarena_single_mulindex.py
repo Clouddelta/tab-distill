@@ -7,12 +7,10 @@ import pickle
 import os
 from pathlib import Path
 from collections import Counter
-import torch
 import src.config
 import os
 import src.spectralexplain as spex
 import joblib
-memory = joblib.Memory(location=src.config.cache_dir, verbose=0)
 
 def openml_get_task(task_id):
     fname = os.path.join(src.config.cache_dir_openml, str(task_id) + '.pkl')
@@ -27,7 +25,6 @@ def openml_get_task(task_id):
     return task, dataset
 
 
-@memory.cache
 def process_task(
     task_id,
     num_samples=2,
@@ -50,6 +47,17 @@ def process_task(
     # Create output directory if it doesn't exist
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
+
+    # Check if already done
+    all_completed = True
+    for index_type in index_types:
+        summary_filename = output_path / f'interactions_summary_{task_id}_{index_type}.pkl'
+        if not summary_filename.exists():
+            all_completed = False
+    if all_completed:
+        print('Already done!')
+        return None, None
+            
     
     # Load task and data
     # task = openml.tasks.get_task(task_id)
@@ -200,21 +208,23 @@ def process_task(
 
 
     ######################################################## TABPFN ########################################################
-
+    # import torch
     # Check if GPU is available
-    print("\n=== GPU Detection ===")
-    print(f"CUDA available: {torch.cuda.is_available()}")
-    if torch.cuda.is_available():
-        print(f"GPU device: {torch.cuda.get_device_name(0)}")
-        print(f"Number of GPUs: {torch.cuda.device_count()}")
-        print(f"Current GPU: {torch.cuda.current_device()}")
-        device_to_use = "cuda"
-    else:
-        print("Warning: CUDA is not available, will use CPU")
-        print("If you have a GPU, please check if PyTorch is correctly installed with CUDA version")
-        device_to_use = "auto"
-        # If must run on CPU, set environment variable to allow large datasets
-        os.environ["TABPFN_ALLOW_CPU_LARGE_DATASET"] = "1"
+    # print("\n=== GPU Detection ===")
+    # print(f"CUDA available: {torch.cuda.is_available()}")
+    # if torch.cuda.is_available():
+    #     print(f"GPU device: {torch.cuda.get_device_name(0)}")
+    #     print(f"Number of GPUs: {torch.cuda.device_count()}")
+    #     print(f"Current GPU: {torch.cuda.current_device()}")
+    #     device_to_use = "cuda"
+    # else:
+    #     print("Warning: CUDA is not available, will use CPU")
+    #     print("If you have a GPU, please check if PyTorch is correctly installed with CUDA version")
+    #     device_to_use = "auto"
+    #     # If must run on CPU, set environment variable to allow large datasets
+    #     os.environ["TABPFN_ALLOW_CPU_LARGE_DATASET"] = "1"
+    # device_to_use = 'auto'
+    device_to_use = 'cpu'
 
     # Train model using training set - select appropriate model based on task type
     print(f"\n=== Training TabPFN Model ({task_type}) ===")
@@ -222,25 +232,50 @@ def process_task(
     print(f"Training set size: {X_train.shape[0]} samples")
 
     # Create model, set device and ignore_pretraining_limits (if GPU is not available)
-    os.environ['TABPFN_MODEL_CACHE_DIR'] = src.config.cache_dir_tabpfn
-    from tabpfn import TabPFNRegressor, TabPFNClassifier
+    # os.environ['TABPFN_MODEL_CACHE_DIR'] = src.config.cache_dir_tabpfn
+    
     if task_type == "classification":
+        from tabpfn.classifier import TabPFNClassifier
         model = TabPFNClassifier(
             device=device_to_use,
-            ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
-            # model_path=src.config.cache_dir_tabpfn,
+            ignore_pretraining_limits=True,
+            # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+            # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-classifier-v2.5_default.ckpt'),
         )
         n_classes = len(np.unique(y_train))
         print(f"Number of classes: {n_classes}")
     else:
+        from tabpfn.regressor import TabPFNRegressor
         model = TabPFNRegressor(
             device=device_to_use,
-            ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
-            # model_path=src.config.cache_dir_tabpfn,
+            ignore_pretraining_limits=True,
+            # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+            # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-regressor-v2.5_default.ckpt'),
         )
+
+    # if task_type == "classification":
+    #     from tabicl import TabICLClassifier
+    #     # from tabpfn.classifier import TabPFNClassifier
+    #     model = TabICLClassifier(
+    #         device=device_to_use,
+    #         # ignore_pretraining_limits=True,
+    #         # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+    #         # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-classifier-v2.5_default.ckpt'),
+    #     )
+    #     n_classes = len(np.unique(y_train))
+    #     print(f"Number of classes: {n_classes}")
+    # else:
+    #     raise NotImplementedError("Regression task not implemented with TabICL yet")
+    #     # from tabpfn.regressor import TabPFNRegressor
+    #     # model = TabPFNRegressor(
+    #     #     device=device_to_use,
+    #     #     ignore_pretraining_limits=True,
+    #     #     # ignore_pretraining_limits=not torch.cuda.is_available(),  # Allow CPU run if GPU is not available
+    #     #     # model_path=os.path.join(src.config.cache_dir_tabpfn, 'tabpfn-v2.5-regressor-v2.5_default.ckpt'),
+    #     # )
     
     model.fit(X_train, y_train)
-    print(f"TabPFN {task_type} model training completed!")
+    print(f"{task_type} model training completed!")
 
     # Evaluate model performance
     print(f"\n=== Model Evaluation ===")

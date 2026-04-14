@@ -1,0 +1,7 @@
+Method,MSE_rank,RMSE_rank,MAE_rank,R2_rank,avg_rank
+TabPFN,1.0,1.0,1.0,1.0,1.0
+XGBoost,2.0,2.0,2.0,2.0,2.0
+EBM_FBII,3.0,3.0,3.0,3.0,3.0
+DecisionTree,4.0,4.0,4.0,4.0,4.0
+LinearRegression,5.0,5.0,5.0,5.0,5.0
+PyGAM_FBII,6.0,6.0,6.0,6.0,6.0

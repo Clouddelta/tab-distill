@@ -1,3 +1,6 @@
+# TabDistill: Selecting Feature Interactions for Generalized Additive Models by Distilling Foundation Models
+
+This repository contains the implementation of the experiments described in the paper: *(link TBD)*.
 
 ### Installation
 
@@ -6,10 +9,9 @@ Setup using uv (requires [installing uv](https://docs.astral.sh/uv/getting-start
 - Note: relies heavily on and makes small modifications to the [spex](https://github.com/basics-lab/spectral-explain) library
 
 ### Organization
-- source code with useful importable functions is in `src` folder
-- main experiments to run are under `experiments` folder
-- analysis scripts are in the `notebooks` folder
-- hyperparameter loops are in the `scripts` folder`
+- **`src/`** — importable utilities, `config.py`, Talent OpenML helpers, vendored `spectralexplain`.
+- **`experiments/`** — runnable pipelines: `interaction_search/` (TabArena interaction pickles), `TabDistill_downstream_comparison/` (index and baseline comparisons), `EBM_comparison/` (PMLB Table 1).
+- **`notebooks/`** — EDA and case study notebooks (and related scripts).
 
 ### Dataset
 Source: TabArena benchmark 
@@ -30,33 +32,71 @@ Task types: Regression & Classification
 |  363674 | hazelnut-spread-contaminant-detection | Binary Classification     | Detect food contamination                      |
 |  363700 | seismic-bumps                         | Binary Classification     | Predict seismic event bumps                    |
 
-  
-Talent Datasets, N < 10000, p < 10, regression task: 10 datasets in total.
+
+**Talent benchmark (local `.npy` / `info.json` layouts):** ten regression-style datasets with `N < 10000`, `p < 10` are listed in `src/talent_single_mulindex.py` (`datasets = [...]`). There is **no** `talent_batch_tasks_mulindex.py` in this repo; run `src/talent_single_mulindex.py` from the repo root (after editing the `dataset_name` / loop in `if __name__ == "__main__"` as needed). Outputs go under `talent_interaction_result/` by default, as `interactions_summary_{dataset_name}_{index_type}.pkl` (and per-index `interactions_{dataset_name}_{index_type}.pkl`).
 
 ### Usage
 
-Produce SPEX interaction search results for Talent Benchmark datasets, which will be saved as `interactions_summary_{task_name}_{index}.pkl` in `talent_interaction_result` folder: `uv run talent_batch_tasks_mulindex.py`
+Run commands from the **repository root** unless noted.
 
-[Jingyun: may need to integrate this function with the next line] Compute SPEX interaction search results for **NEW** TabArena Benchmark datasets, which will be saved as `interactions_summary_{task_id}_{index}.pkl` in `my_results` folder: `uv run_batch_tasks_mulindex.py 363671 --num-samples 0 --output-dir my_results`
+**1. TabArena — batch interaction search**
 
-Compute SPEX interaction search results, which will be saved as `interactions_summary_{task_id}_{index}.pkl` in `interaction_12_14_2025` folder: `uv run run_batch_tasks_mulindex.py`
+Script: `experiments/interaction_search/tabarena_batch_tasks_mulindex.py` (imports `tabarena_single_mulindex.process_task`). It writes, for each task id and index type, files such as `interactions_summary_{task_id}_{index_type}.pkl` under the chosen output directory.
 
-Then compare the performance of different index choices. Use `compare_index_performance.py` for all tasks in `interaction_12_14_2025` folder, e.g.: `uv run compare_index_performance.py 363698 10 --max-interaction-order 4 --output comparison.png --no-show`
+Default output directory in code is `experiments/interaction_search/interaction_1_14_2026_500` (override with `--output-dir`).
 
+```bash
+# All default TabArena task IDs; --num-samples 0 means use all training rows (can be slow)
+uv run python experiments/interaction_search/tabarena_batch_tasks_mulindex.py --num-samples 0
 
-## Parameters
+# Subset of tasks and custom output folder
+uv run python experiments/interaction_search/tabarena_batch_tasks_mulindex.py 363671 363698 --num-samples 2 --output-dir my_results
+```
 
-- `--output` or `-o`: Output path for saving model comparison plot
-- `N_interactions`: Number of interactions to use
-- `--max-interaction-order`: Interaction order (2, 3, or 4)
-  - `2`: 2-way interactions only
-  - `3`: 2-way + 3-way interactions
-  - `4`: 2-way + 3-way + 4-way interactions
-  - Default: `2`
-- `--interaction-dir`: Directory containing interaction pickle files (default: `./interaction_12_14_2025`)
-- `--no-show`: Do not display matplotlib windows (useful when saving plots)
-- `--indices`: Specify indices to compare (e.g., `--indices bii fbii sii`). Default: all available indices
+**2. TabArena — compare SPEX indices on downstream EBM**
 
+Script: `experiments/TabDistill_downstream_comparison/compare_index_performance.py`. Expects summaries named `interactions_summary_{task_id}_{index_type}.pkl` under `--interaction-dir`.
 
+Default `--interaction-dir` is `experiments/interaction_search/interaction_output` (not the batch script’s default folder). If you used the batch default output, point `--interaction-dir` at that path (e.g. `experiments/interaction_search/interaction_1_14_2026_500`).
 
+```bash
+uv run python experiments/TabDistill_downstream_comparison/compare_index_performance.py 363698 10 --max-interaction-order 4 --output comparison.png --no-show --interaction-dir experiments/interaction_search/interaction_1_14_2026_500
+```
+
+**3. Batch driver (index comparison + RuleFit baseline)**
+
+`experiments/TabDistill_downstream_comparison/run.py` loops over tasks and subprocesses `compare_index_performance.py` and `rulefit_baseline_ebm.py`. Use `--interaction-dir` consistent with step 1.
+
+```bash
+uv run python experiments/TabDistill_downstream_comparison/run.py --experiment all
+uv run python experiments/TabDistill_downstream_comparison/run.py --tasks 363615 363698 --experiment index --interaction-dir experiments/interaction_search/interaction_1_14_2026_500
+```
+
+**4. PMLB Table 1 pipeline**
+
+`experiments/EBM_comparison/run.py` — see the module docstring for step list and `python experiments/EBM_comparison/run.py --help`.
+
+### Parameters
+
+**`tabarena_batch_tasks_mulindex.py`**
+- **`task_ids`** (optional positionals): OpenML task ids; if omitted, uses the built-in TabArena list.
+- **`--num-samples`**: Training rows to process per task; **`0` = all rows** (default in argparse is `0`).
+- **`--output-dir`**: Directory for pickles (default: `experiments/interaction_search/interaction_1_14_2026_500`).
+
+**`compare_index_performance.py`**
+- **`task_id`** (positional): OpenML task id.
+- **`N_interactions`** (positional): Number of interactions to feed into the SPEX-EBM pipeline (not a `--flag`).
+- **`--output` / `-o`**: Controls where the figure is saved: the script resolves a **directory** from this argument (e.g. `out/plot.png` → `out/`; `plot.png` → `.`). The image filename is always **`index_comparison_{task_id}_{order}.png`** in that directory—not necessarily the name you pass. If `-o` is omitted, **no PNG** is written; **`index_results_{task_id}_{order}.csv`** is still saved under **`.`** (cwd).
+- **`--max-interaction-order`**: `2`, `3`, or `4` (default **`2`**): 2-way only; 2+3-way; or 2+3+4-way.
+- **`--interaction-dir`**: Folder with `interactions_summary_{task_id}_*.pkl` (default **`experiments/interaction_search/interaction_output`** relative to repo layout).
+- **`--no-show`**: Do not open an interactive plot window (typical for headless / when saving).
+- **`--indices`**: Space-separated index names to compare (e.g. `fbii bii sii`); default is all indices found under `--interaction-dir` for that task. Typical index names match the batch run: `fbii`, `fsii`, `stii`, `bii`, `sii`, `fourier`, `mobius`.
+
+**`rulefit_baseline_ebm.py`** (same positional `task_id` and `N_interactions`; no `--interaction-dir` / `--indices`). **`--max-interaction-order`** applies to the RuleFit side; **`--output`**, **`--no-show`** as above.
+
+**`experiments/TabDistill_downstream_comparison/run.py`**
+- **`--tasks`**: OpenML ids (default: all ten TabArena ids in code).
+- **`--experiment`**: `all` | `index` | `baseline`.
+- **`--interaction-dir`**: Pickle root for the index experiment (default: `experiments/interaction_search/interaction_output`).
+- **`--output-dir`**: Base directory for subprocess outputs (default: `experiments/TabDistill_downstream_comparison/output`).
 

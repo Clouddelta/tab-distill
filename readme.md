@@ -1,6 +1,10 @@
 # TabDistill: Selecting Feature Interactions for Generalized Additive Models by Distilling Foundation Models
 
-This repository contains the implementation of the experiments described in the paper: *(link TBD)*.
+Code and experiments for the paper *(link TBD)*. The repo is organized around three themes:
+
+1. **TabArena workflow** — how to run interaction selection (TabDistill) and evaluate downstream models on the benchmark tasks.
+2. **Experiments and simulations** — batch pipelines under `experiments/` (including broader benchmarks such as PMLB Table 1).
+3. **Case study** — narrative analysis in the notebooks (e.g. `notebooks/03_case_study.ipynb`).
 
 ### Installation
 
@@ -33,7 +37,6 @@ Task types: Regression & Classification
 |  363700 | seismic-bumps                         | Binary Classification     | Predict seismic event bumps                    |
 
 
-**Talent benchmark (local `.npy` / `info.json` layouts):** ten regression-style datasets with `N < 10000`, `p < 10` are listed in `src/talent_single_mulindex.py` (`datasets = [...]`). There is **no** `talent_batch_tasks_mulindex.py` in this repo; run `src/talent_single_mulindex.py` from the repo root (after editing the `dataset_name` / loop in `if __name__ == "__main__"` as needed). Outputs go under `talent_interaction_result/` by default, as `interactions_summary_{dataset_name}_{index_type}.pkl` (and per-index `interactions_{dataset_name}_{index_type}.pkl`).
 
 ### Usage
 

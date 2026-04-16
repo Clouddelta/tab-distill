@@ -1,6 +1,15 @@
-# TabDistill: Selecting Feature Interactions for Generalized Additive Models by Distilling Foundation Models
+<h1 align="center"> ⚗️ TabDistill ⚗️ </h1>
+<p align="center"> <b>Selecting Feature Interactions for GAMs by Distilling Foundation Models</b> (<a href="https://arxiv.org/abs/2604.13332">Jia, Singh, Carauana, & Lengerich 2026</a>).
+</p>
 
-Code and experiments for the paper *(link TBD)*. The repo is organized around three themes:
+<p align="center">
+  <img src="https://img.shields.io/badge/license-mit-blue.svg">
+  <img src="https://img.shields.io/badge/python-3.13+-blue">
+</p>  
+
+![](./tabdistill_pipeline.png)
+
+The repo is organized around three themes:
 
 1. **TabArena workflow** — how to run interaction selection (TabDistill) and evaluate downstream models on the benchmark tasks.
 2. **Experiments and simulations** — batch pipelines under `experiments/` (including broader benchmarks such as PMLB Table 1).
@@ -9,16 +18,19 @@ Code and experiments for the paper *(link TBD)*. The repo is organized around th
 ### Installation
 
 Setup using uv (requires [installing uv](https://docs.astral.sh/uv/getting-started/installation/) then run a script using `uv run <script>`).
+
 - Set appropriate paths in `src/config.py` for caching OpenML datasets and TabPFN models.
 - Note: relies heavily on and makes small modifications to the [spex](https://github.com/basics-lab/spectral-explain) library
 
 ### Organization
+
 - **`src/`** — importable utilities, `config.py`, Talent OpenML helpers, vendored `spectralexplain`.
 - **`experiments/`** — runnable pipelines: `interaction_search/` (TabArena interaction pickles), `TabDistill_downstream_comparison/` (index and baseline comparisons), `EBM_comparison/` (PMLB Table 1).
 - **`notebooks/`** — EDA and case study notebooks (and related scripts).
 
 ### Dataset
-Source: TabArena benchmark 
+
+Source: TabArena benchmark
 Selection Rule: N < 10000, p < 10
 Total: 10 datasets
 Task types: Regression & Classification
@@ -35,8 +47,6 @@ Task types: Regression & Classification
 |  363615 | Another-Dataset-on-used-Fiat-500      | Regression                | Predict used car prices                        |
 |  363674 | hazelnut-spread-contaminant-detection | Binary Classification     | Detect food contamination                      |
 |  363700 | seismic-bumps                         | Binary Classification     | Predict seismic event bumps                    |
-
-
 
 ### Usage
 
@@ -82,11 +92,13 @@ uv run python experiments/TabDistill_downstream_comparison/run.py --tasks 363615
 ### Parameters
 
 **`tabarena_batch_tasks_mulindex.py`**
+
 - **`task_ids`** (optional positionals): OpenML task ids; if omitted, uses the built-in TabArena list.
 - **`--num-samples`**: Training rows to process per task; **`0` = all rows** (default in argparse is `0`).
 - **`--output-dir`**: Directory for pickles (default: `experiments/interaction_search/interaction_1_14_2026_500`).
 
 **`compare_index_performance.py`**
+
 - **`task_id`** (positional): OpenML task id.
 - **`N_interactions`** (positional): Number of interactions to feed into the SPEX-EBM pipeline (not a `--flag`).
 - **`--output` / `-o`**: Controls where the figure is saved: the script resolves a **directory** from this argument (e.g. `out/plot.png` → `out/`; `plot.png` → `.`). The image filename is always **`index_comparison_{task_id}_{order}.png`** in that directory—not necessarily the name you pass. If `-o` is omitted, **no PNG** is written; **`index_results_{task_id}_{order}.csv`** is still saved under **`.`** (cwd).
@@ -98,8 +110,20 @@ uv run python experiments/TabDistill_downstream_comparison/run.py --tasks 363615
 **`rulefit_baseline_ebm.py`** (same positional `task_id` and `N_interactions`; no `--interaction-dir` / `--indices`). **`--max-interaction-order`** applies to the RuleFit side; **`--output`**, **`--no-show`** as above.
 
 **`experiments/TabDistill_downstream_comparison/run.py`**
+
 - **`--tasks`**: OpenML ids (default: all ten TabArena ids in code).
 - **`--experiment`**: `all` | `index` | `baseline`.
 - **`--interaction-dir`**: Pickle root for the index experiment (default: `experiments/interaction_search/interaction_output`).
 - **`--output-dir`**: Base directory for subprocess outputs (default: `experiments/TabDistill_downstream_comparison/output`).
 
+```r
+@misc{jia2026tabdistill,
+      title={Selecting Feature Interactions for Generalized Additive Models by Distilling Foundation Models}, 
+      author={Jingyun Jia and Chandan Singh and Rich Caruana and Ben Lengerich},
+      year={2026},
+      eprint={2604.13332},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2604.13332}, 
+}
+```
